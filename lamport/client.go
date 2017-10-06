@@ -27,7 +27,7 @@ func NewClient(pid int, post string) *Client {
       },
       0,
       0,
-      make([]int, 0, CLIENT_COUNT),
+      make(Queue, 0, CLIENT_COUNT),
       make(chan int, 1),
     },
   }
