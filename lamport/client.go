@@ -7,6 +7,8 @@ import (
   "time"
 )
 
+const CLIENT_COUNT = 5
+
 type Client struct {
   likes int
   post string
@@ -19,8 +21,10 @@ func NewClient(pid int, post string) *Client {
     post,
     &Messenger{
       pid,
-      &sync.RWMutex{},
-      make(map[int]net.Conn),
+      &Connector{
+        &sync.RWMutex{},
+        make(map[int]net.Conn),
+      },
       0,
       0,
       make([]int, 0, CLIENT_COUNT),
@@ -53,6 +57,7 @@ func (c *Client) RecvMsgs() {
 func (c *Client) Like() {
   c.RequestLock()
   c.likes += 1
+  fmt.Printf("LIKES: %d\n", c.likes)
   c.ReleaseLock()
 }
 
