@@ -22,6 +22,7 @@ type Connector struct {
 
 func (cn *Connector) AcceptConnections(pid int) {
   port := strconv.Itoa(pid + BASE_PORT)
+  fmt.Println("Accept")
   l, err := net.Listen(CONN_TYPE, CONN_HOST+":"+port)
   if err != nil {
     fmt.Println("Error listening:", err.Error())
@@ -99,4 +100,8 @@ func sendPid(pid int, conn net.Conn) {
     fmt.Println("Write to server failed:", err.Error())
     os.Exit(1)
   }
+}
+
+func writeInt(i int, conn net.Conn) (int, error) {
+  return conn.Write([]byte(strconv.Itoa(i)))
 }

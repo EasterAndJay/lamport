@@ -34,6 +34,7 @@ func NewClient(pid int, post string) *Client {
 }
 
 func (c *Client) Run() {
+  fmt.Println("Running")
   go c.AcceptConnections(c.pid)
   go c.InitiateConnections(c.pid)
   for len(c.connections) != CLIENT_COUNT - 1 {
@@ -72,6 +73,5 @@ func (c *Client) ReleaseLock() {
   for _, conn := range c.connections {
     c.Release(conn)
   }
-  c.UpdateClock()
   c.likeLock <- 1
 }

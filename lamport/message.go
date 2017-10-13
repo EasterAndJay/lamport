@@ -1,12 +1,11 @@
 package lamport
 
-import(
-  "strconv"
-  "strings"
-)
-type Queue []Request
+// import(
+// )
+type Queue []Message
 
-type Request struct {
+type Message struct {
+  msgType int
   pid int
   clock int
 }
@@ -24,11 +23,4 @@ func (q Queue) Less(i, j int) bool {
     return q[i].pid < q[j].pid
   }
   return q[i].clock < q[j].clock
-}
-
-func parseRequest(msgBody string) Request {
-  split := strings.Split(msgBody, ",")
-  pid, _ := strconv.Atoi(split[0])
-  clock, _ := strconv.Atoi(split[1])
-  return Request{clock, pid}
 }

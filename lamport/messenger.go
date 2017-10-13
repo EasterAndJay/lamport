@@ -1,15 +1,17 @@
 package lamport
 
 import(
+  "bufio"
+  "encoding/gob"
   "fmt"
+  "math"
   "net"
   "sort"
-  "strconv"
-  "strings"
 )
 
 const (
-  REQUEST = iota
+  CONNECT = iota
+  REQUEST
   REPLY
   RELEASE
 )
@@ -24,51 +26,62 @@ type Messenger struct {
   likeLock chan int
 }
 
-func writeInt(i int, conn net.Conn) (int, error) {
-  return conn.Write([]byte(strconv.Itoa(i)))
+func (m *Messenger) SendMessage(msg Message, conn net.Conn) error {
+  encoder := gob.NewEncoder(bufio.NewWriter(conn))
+  m.UpdateClock(-1)
+  return encoder.Encode(msg)
+}
+
+func (m *Messenger) RecvMessage(conn net.Conn) (Message, error) {
+  msg := Message{}
+  decoder := gob.NewDecoder(bufio.NewReader(conn))
+  err := decoder.Decode(&msg)
+  if err != nil {
+    return msg, err
+  }
+  m.UpdateClock(msg.clock)
+  return msg, nil
 }
 
 func (m *Messenger) Reply(conn net.Conn) {
-  writeInt(REPLY, conn)
+  msg := Message{REPLY, m.pid, m.clock}
+  m.SendMessage(msg, conn)
 }
 
 func (m *Messenger) Request(conn net.Conn) {
-  m.Enqueue(Request{m.clock, m.pid})
-  msg := fmt.Sprintf("%d,%d,%d", REQUEST, m.pid, m.clock)
-  conn.Write([]byte(msg))
+  msg := Message{REQUEST, m.clock, m.pid}
+  m.Enqueue(msg)
+  m.SendMessage(msg, conn)
 }
 
 func (m *Messenger) Release(conn net.Conn) {
-  writeInt(RELEASE, conn)
+  msg := Message{RELEASE, m.clock, m.pid}
+  m.UpdateClock(-1)
+  m.SendMessage(msg, conn)
 }
 
-func (m *Messenger) Enqueue(r Request) {
-  m.queue = append(m.queue, r)
+func (m *Messenger) Enqueue(msg Message) {
+  m.queue = append(m.queue, msg)
   sort.Sort(m.queue)
 }
 
-func (m *Messenger) UpdateClock() {
-  m.clock += 1
+func (m *Messenger) UpdateClock(peerClock int) {
+  m.clock = int(math.Max(float64(m.clock), float64(peerClock))) + 1
   fmt.Printf("Client %d: Updated clock to %d\n", m.pid, m.clock)
 }
 
 func (m *Messenger) ProcessMsg(senderPid int, conn net.Conn) {
-  buff := make([]byte, 1024)
   for {
-    conn.Read(buff)
+    msg, err := m.RecvMessage(conn)
+    if err != nil {
+      panic(err)
+    }
     fmt.Printf("Client %d: Message received from Client %d\n", m.pid, senderPid)
-    m.UpdateClock()
-    msg := string(buff[:])
     // TODO: BUGS BE HERE
     fmt.Println(msg)
-    split := strings.SplitN(msg, ",", 1)
-    msgType, _ := strconv.Atoi(split[0])
-    switch msgType {
+    switch msg.msgType {
     case REQUEST:
-      fmt.Println(split)
-      msgBody := split[1]
-      request := parseRequest(msgBody)
-      m.Enqueue(request)
+      m.Enqueue(msg)
       m.Reply(conn)
     case REPLY:
       m.replyCount += 1
