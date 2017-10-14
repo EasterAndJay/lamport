@@ -22,6 +22,8 @@ func NewClient(pid int, post string, n int) *Client {
       &Connector{
         &sync.RWMutex{},
         make(map[int]net.Conn),
+
+        make(chan int, 1),
       },
       0,
       0,
@@ -32,16 +34,14 @@ func NewClient(pid int, post string, n int) *Client {
 }
 
 func (c *Client) Run(n int) {
-  fmt.Println("Running")
+  fmt.Printf("Client %d: Running\n", c.pid)
   go c.AcceptConnections(c.pid, n)
   go c.InitiateConnections(c.pid, n)
-  for len(c.connections) != n - 1 {
-
-  }
-  fmt.Printf("All connections made from client: %d\n", c.pid)
+  <- c.signal
+  fmt.Printf("Client %d: Connected to all other peers\n", c.pid)
   go c.RecvMsgs()
   for {
-    fmt.Printf("client: %d | Post content: %s | LIKE count: %d\n", c.pid, c.post, c.likes)
+    // fmt.Printf("Client %d: Post content -  %s | LIKE count: %d\n", c.pid, c.post, c.likes)
     time.Sleep(time.Second * 5)
     c.Like()
   }
@@ -49,6 +49,7 @@ func (c *Client) Run(n int) {
 
 func (c *Client) RecvMsgs() {
   for senderPid, conn := range c.connections {
+    fmt.Printf("Client %d: Starting to process messages from client %d\n", c.pid, senderPid)
     go c.ProcessMsg(senderPid, conn)
   }
 }
@@ -56,20 +57,21 @@ func (c *Client) RecvMsgs() {
 func (c *Client) Like() {
   c.RequestLock()
   c.likes += 1
-  fmt.Printf("LIKES: %d\n", c.likes)
+  fmt.Printf("Client %d: LIKES = %d\n", c.pid, c.likes)
   c.ReleaseLock()
 }
 
 func (c *Client) RequestLock() {
-  for _, conn := range c.connections {
+  for senderPid, conn := range c.connections {
+    fmt.Printf("Client %d: Sending request message to client %d\n", c.pid, senderPid)
     c.Request(conn)
   }
   <-c.likeLock
 }
 
 func (c *Client) ReleaseLock() {
-  for _, conn := range c.connections {
+  for senderPid, conn := range c.connections {
+    fmt.Printf("Client %d: Sending release message to client %d\n", c.pid, senderPid)
     c.Release(conn)
   }
-  c.likeLock <- 1
 }

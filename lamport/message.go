@@ -5,9 +5,9 @@ package lamport
 type Queue []Message
 
 type Message struct {
-  msgType int
-  pid int
-  clock int
+  MsgType int
+  Pid int
+  Clock int
 }
 
 func (q Queue) Len() int {
@@ -19,8 +19,8 @@ func (q Queue) Swap(i, j int) {
 }
 
 func (q Queue) Less(i, j int) bool {
-  if q[i].clock == q[j].clock {
-    return q[i].pid < q[j].pid
+  if q[i].Clock == q[j].Clock {
+    return q[i].Pid < q[j].Pid
   }
-  return q[i].clock < q[j].clock
+  return q[i].Clock < q[j].Clock
 }

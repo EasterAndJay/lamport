@@ -1,7 +1,6 @@
 package lamport
 
 import(
-  "bufio"
   "encoding/gob"
   "fmt"
   "math"
@@ -10,8 +9,7 @@ import(
 )
 
 const (
-  CONNECT = iota
-  REQUEST
+  REQUEST = iota
   REPLY
   RELEASE
 )
@@ -27,19 +25,24 @@ type Messenger struct {
 }
 
 func (m *Messenger) SendMessage(msg Message, conn net.Conn) error {
-  encoder := gob.NewEncoder(bufio.NewWriter(conn))
+  encoder := gob.NewEncoder(conn)
   m.UpdateClock(-1)
-  return encoder.Encode(msg)
+  err := encoder.Encode(msg)
+  if err != nil {
+    fmt.Println(err)
+  }
+  return err
 }
 
 func (m *Messenger) RecvMessage(conn net.Conn) (Message, error) {
   msg := Message{}
-  decoder := gob.NewDecoder(bufio.NewReader(conn))
+  decoder := gob.NewDecoder(conn)
   err := decoder.Decode(&msg)
   if err != nil {
+    fmt.Println(err)
     return msg, err
   }
-  m.UpdateClock(msg.clock)
+  m.UpdateClock(msg.Clock)
   return msg, nil
 }
 
@@ -56,7 +59,6 @@ func (m *Messenger) Request(conn net.Conn) {
 
 func (m *Messenger) Release(conn net.Conn) {
   msg := Message{RELEASE, m.clock, m.pid}
-  m.UpdateClock(-1)
   m.SendMessage(msg, conn)
 }
 
@@ -76,22 +78,22 @@ func (m *Messenger) ProcessMsg(senderPid int, conn net.Conn) {
     if err != nil {
       panic(err)
     }
-    fmt.Printf("Client %d: Message received from Client %d\n", m.pid, senderPid)
-    // TODO: BUGS BE HERE
-    fmt.Println(msg)
-    switch msg.msgType {
+    switch msg.MsgType {
     case REQUEST:
+      fmt.Printf("Client %d: Request Message received from Client %d\n", m.pid, senderPid)
       m.Enqueue(msg)
       m.Reply(conn)
     case REPLY:
+      fmt.Printf("Client %d: Reply Message received from Client %d\n", m.pid, senderPid)
       m.replyCount += 1
-      if m.replyCount == len(m.connections) && m.queue[0].pid == m.pid {
+      if m.replyCount == len(m.connections) && m.queue[0].Pid == m.pid {
         m.replyCount = 0
         m.likeLock <- 1
       }
     case RELEASE:
+      fmt.Printf("Client %d: Release Message received from Client %d\n", m.pid, senderPid)
       m.queue = m.queue[1:]
-      if m.replyCount == len(m.connections) && m.queue[0].pid == m.pid {
+      if m.replyCount == len(m.connections) && m.queue[0].Pid == m.pid {
         m.replyCount = 0
         m.likeLock <- 1
       }
