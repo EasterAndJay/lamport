@@ -20,7 +20,7 @@ type Connector struct {
 }
 
 
-func (cn *Connector) AcceptConnections(pid int) {
+func (cn *Connector) AcceptConnections(pid int, n int) {
   port := strconv.Itoa(pid + BASE_PORT)
   fmt.Println("Accept")
   l, err := net.Listen(CONN_TYPE, CONN_HOST+":"+port)
@@ -31,7 +31,7 @@ func (cn *Connector) AcceptConnections(pid int) {
   defer l.Close()
   fmt.Println("Listening on " + CONN_HOST + ":" + port)
   for {
-    if len(cn.connections) == CLIENT_COUNT - 1 {
+    if len(cn.connections) == n - 1 {
       break
     }
     conn, err := l.Accept()
@@ -48,11 +48,11 @@ func (cn *Connector) AcceptConnections(pid int) {
   }
 }
 
-func (cn *Connector) InitiateConnections(pid int) {
+func (cn *Connector) InitiateConnections(pid int, n int) {
   peerPid := -1
   for {
     peerPid += 1
-    if peerPid > CLIENT_COUNT - 1 {
+    if peerPid > n - 1 {
       peerPid = 0
     }
     if peerPid == pid || cn.connectionExists(peerPid) {

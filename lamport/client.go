@@ -7,15 +7,13 @@ import (
   "time"
 )
 
-const CLIENT_COUNT = 5
-
 type Client struct {
   likes int
   post string
   *Messenger
 }
 
-func NewClient(pid int, post string) *Client {
+func NewClient(pid int, post string, n int) *Client {
   return &Client{
     0,
     post,
@@ -27,17 +25,17 @@ func NewClient(pid int, post string) *Client {
       },
       0,
       0,
-      make(Queue, 0, CLIENT_COUNT),
+      make(Queue, 0, n),
       make(chan int, 1),
     },
   }
 }
 
-func (c *Client) Run() {
+func (c *Client) Run(n int) {
   fmt.Println("Running")
-  go c.AcceptConnections(c.pid)
-  go c.InitiateConnections(c.pid)
-  for len(c.connections) != CLIENT_COUNT - 1 {
+  go c.AcceptConnections(c.pid, n)
+  go c.InitiateConnections(c.pid, n)
+  for len(c.connections) != n - 1 {
 
   }
   fmt.Printf("All connections made from client: %d\n", c.pid)
