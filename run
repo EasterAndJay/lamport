@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CLIENT_COUNT=2
+CLIENT_COUNT=5
 
 go build main.go
 

@@ -8,6 +8,7 @@ type Message struct {
   MsgType int
   Pid int
   Clock int
+  Likes int
 }
 
 func (q Queue) Len() int {

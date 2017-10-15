@@ -50,7 +50,7 @@ func (c *Client) Run(n int) {
 func (c *Client) RecvMsgs() {
   for senderPid, conn := range c.connections {
     fmt.Printf("Client %d: Starting to process messages from client %d\n", c.pid, senderPid)
-    go c.ProcessMsg(senderPid, conn)
+    go c.ProcessMsg(senderPid, conn, &c.likes)
   }
 }
 
@@ -72,6 +72,6 @@ func (c *Client) RequestLock() {
 func (c *Client) ReleaseLock() {
   for senderPid, conn := range c.connections {
     fmt.Printf("Client %d: Sending release message to client %d\n", c.pid, senderPid)
-    c.Release(conn)
+    c.Release(conn, c.likes)
   }
 }

@@ -47,8 +47,11 @@ func (cn *Connector) AcceptConnections(pid int, n int) {
     if err != nil {
       fmt.Println(err)
     }
-    cn.addConnection(peerPid, conn)
-    if cn.finishedConnecting(n) {
+    if !cn.finishedConnecting(n) {
+      cn.connLock.Lock()
+      cn.addConnection(peerPid, conn)
+      cn.connLock.Unlock()
+    } else {
       break
     }
   }
@@ -61,17 +64,22 @@ func (cn *Connector) InitiateConnections(pid int, n int) {
     if peerPid > n - 1 {
       peerPid = 0
     }
-    if peerPid == pid || cn.connectionExists(peerPid) {
+    if peerPid == pid {
       continue
     }
-    conn, err := cn.connectToPeer(peerPid)
-    if err != nil {
-      fmt.Printf("Client %d: Dial failed: %v\n", pid, err.Error())
-      time.Sleep(time.Second)
-      continue
+    cn.connLock.Lock()
+    if !cn.connectionExists(peerPid) {
+      conn, err := cn.connectToPeer(peerPid)
+      if err != nil {
+        fmt.Printf("Client %d: Dial failed: %v\n", pid, err.Error())
+        cn.connLock.Unlock()
+        time.Sleep(time.Second)
+        continue
+      }
+      sendPid(pid, conn)
+      cn.addConnection(peerPid, conn)
     }
-    sendPid(pid, conn)
-    cn.addConnection(peerPid, conn)
+    cn.connLock.Unlock()
     if cn.finishedConnecting(n) {
       break
     }
@@ -79,8 +87,6 @@ func (cn *Connector) InitiateConnections(pid int, n int) {
 }
 
 func (cn *Connector) connectionExists(peerPid int) bool {
-  cn.connLock.RLock()
-  defer cn.connLock.RUnlock()
   if _, ok := cn.connections[peerPid]; ok {
     return true
   }
@@ -88,10 +94,8 @@ func (cn *Connector) connectionExists(peerPid int) bool {
 }
 
 func (cn *Connector) addConnection(peerPid int, conn net.Conn) {
-  cn.connLock.Lock()
   fmt.Printf("Adding peer with pid %d to connections\n", peerPid)
   cn.connections[peerPid] = conn
-  cn.connLock.Unlock()
 }
 
 func (cn *Connector) connectToPeer(peerPid int) (net.Conn, error) {
@@ -106,6 +110,8 @@ func (cn *Connector) connectToPeer(peerPid int) (net.Conn, error) {
 }
 
 func (cn *Connector) finishedConnecting(n int) bool {
+  cn.connLock.RLock()
+  defer cn.connLock.RUnlock()
   if len(cn.connections) == n - 1 {
     cn.Signal()
     return true
