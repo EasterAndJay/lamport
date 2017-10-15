@@ -52,13 +52,14 @@ func (m *Messenger) Reply(conn net.Conn) {
 }
 
 func (m *Messenger) Request(conn net.Conn) {
-  msg := Message{REQUEST, m.clock, m.pid}
+  msg := Message{REQUEST, m.pid, m.clock}
   m.Enqueue(msg)
   m.SendMessage(msg, conn)
 }
 
 func (m *Messenger) Release(conn net.Conn) {
-  msg := Message{RELEASE, m.clock, m.pid}
+  msg := Message{RELEASE, m.pid, m.clock}
+  m.queue = m.queue[1:]
   m.SendMessage(msg, conn)
 }
 
@@ -86,6 +87,7 @@ func (m *Messenger) ProcessMsg(senderPid int, conn net.Conn) {
     case REPLY:
       fmt.Printf("Client %d: Reply Message received from Client %d\n", m.pid, senderPid)
       m.replyCount += 1
+      fmt.Printf("%v\n", m.queue)
       if m.replyCount == len(m.connections) && m.queue[0].Pid == m.pid {
         m.replyCount = 0
         m.likeLock <- 1
